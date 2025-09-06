@@ -2,7 +2,7 @@
 {                                                                           }
 {           Delphi Package Manager - DPM                                    }
 {                                                                           }
-{           Copyright © 2019 Vincent Parrett and contributors               }
+{           Copyright ï¿½ 2019 Vincent Parrett and contributors               }
 {                                                                           }
 {           vincent@finalbuilder.com                                        }
 {           https://www.finalbuilder.com                                    }
@@ -80,6 +80,14 @@ type
     function GetSources : IList<ISourceConfig>;
     function GetFileName : string;
     procedure SetFileName(const value : string);
+    
+    // PubGrub getters and setters
+    function GetUsePubGrub: Boolean;
+    function GetPubGrubMaxBacktracks: Integer;
+    function GetPubGrubConflictExplanationDepth: Integer;
+    procedure SetUsePubGrub(const value: Boolean);
+    procedure SetPubGrubMaxBacktracks(const value: Integer);
+    procedure SetPubGrubConflictExplanationDepth(const value: Integer);
 
     property FileName : string read GetFileName write SetFileName;
     //defaults to %userprofile%\.dpm\packages - can override with env var DPM_PACKAGES
@@ -87,6 +95,11 @@ type
     property IsDefaultPackageCacheLocation : boolean read GetIsDefaultPackageCacheLocation;
 
     property Sources : IList<ISourceConfig>read GetSources;
+    
+    // PubGrub properties
+    property UsePubGrub: Boolean read GetUsePubGrub write SetUsePubGrub;
+    property PubGrubMaxBacktracks: Integer read GetPubGrubMaxBacktracks write SetPubGrubMaxBacktracks;
+    property PubGrubConflictExplanationDepth: Integer read GetPubGrubConflictExplanationDepth write SetPubGrubConflictExplanationDepth;
 
   end;
 

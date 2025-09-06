@@ -2,7 +2,7 @@
 {                                                                           }
 {           Delphi Package Manager - DPM                                    }
 {                                                                           }
-{           Copyright © 2019 Vincent Parrett and contributors               }
+{           Copyright ï¿½ 2019 Vincent Parrett and contributors               }
 {                                                                           }
 {           vincent@finalbuilder.com                                        }
 {           https://www.finalbuilder.com                                    }
@@ -84,6 +84,11 @@ type
     FPackageCacheLocation : string;
     FFileName : string;
     FLogger : ILogger;
+    
+    // PubGrub configuration options
+    FUsePubGrub: Boolean;
+    FPubGrubMaxBacktracks: Integer;
+    FPubGrubConflictExplanationDepth: Integer;
   protected
     function GetFileName : string;
     procedure SetFileName(const value : string);
@@ -93,6 +98,14 @@ type
     function GetIsDefaultPackageCacheLocation : Boolean;
     procedure AddDefaultSources;
     function GetSourceByName(const name : string) : ISourceConfig;
+    
+    // PubGrub method declarations
+    function GetUsePubGrub: Boolean;
+    function GetPubGrubMaxBacktracks: Integer;
+    function GetPubGrubConflictExplanationDepth: Integer;
+    procedure SetUsePubGrub(const value: Boolean);
+    procedure SetPubGrubMaxBacktracks(const value: Integer);
+    procedure SetPubGrubConflictExplanationDepth(const value: Integer);
 
     function LoadFromFile(const fileName : string) : boolean;
     function SaveToFile(const fileName : string) : boolean;
@@ -321,6 +334,11 @@ begin
   inherited Create;
   FLogger := logger;
   FSources := TCollections.CreateList<ISourceConfig>;
+  
+  // PubGrub defaults
+  FUsePubGrub := False; // Default to legacy for backward compatibility
+  FPubGrubMaxBacktracks := 10000;
+  FPubGrubConflictExplanationDepth := 10;
 
 end;
 
@@ -479,6 +497,42 @@ end;
 procedure TConfiguration.SetPackageCacheLocation(const value : string);
 begin
   FPackageCacheLocation := value;
+end;
+
+// PubGrub configuration methods
+
+function TConfiguration.GetUsePubGrub: Boolean;
+begin
+  Result := FUsePubGrub;
+end;
+
+procedure TConfiguration.SetUsePubGrub(const value: Boolean);
+begin
+  FUsePubGrub := value;
+end;
+
+function TConfiguration.GetPubGrubMaxBacktracks: Integer;
+begin
+  Result := FPubGrubMaxBacktracks;
+end;
+
+procedure TConfiguration.SetPubGrubMaxBacktracks(const value: Integer);
+begin
+  if value < 1 then
+    raise EArgumentException.Create('PubGrubMaxBacktracks must be greater than 0');
+  FPubGrubMaxBacktracks := value;
+end;
+
+function TConfiguration.GetPubGrubConflictExplanationDepth: Integer;
+begin
+  Result := FPubGrubConflictExplanationDepth;
+end;
+
+procedure TConfiguration.SetPubGrubConflictExplanationDepth(const value: Integer);
+begin
+  if value < 1 then
+    raise EArgumentException.Create('PubGrubConflictExplanationDepth must be greater than 0');
+  FPubGrubConflictExplanationDepth := value;
 end;
 
 end.

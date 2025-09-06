@@ -2,7 +2,7 @@
 {                                                                           }
 {           Delphi Package Manager - DPM                                    }
 {                                                                           }
-{           Copyright © 2019 Vincent Parrett and contributors               }
+{           Copyright ï¿½ 2019 Vincent Parrett and contributors               }
 {                                                                           }
 {           vincent@finalbuilder.com                                        }
 {           https://www.finalbuilder.com                                    }
@@ -117,7 +117,7 @@ begin
 
   Container.RegisterType<IPackageCache, TPackageCache>.AsSingleton();
 
-  Container.RegisterType<IDependencyResolver, TDependencyResolver>;
+  Container.RegisterType<IDependencyResolver, TLegacyDependencyResolver>;
 
   Container.RegisterInstance<TContainer>(Container);
 

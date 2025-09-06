@@ -2,7 +2,7 @@
 {                                                                           }
 {           Delphi Package Manager - DPM                                    }
 {                                                                           }
-{           Copyright © 2019 Vincent Parrett and contributors               }
+{           Copyright ï¿½ 2019 Vincent Parrett and contributors               }
 {                                                                           }
 {           vincent@finalbuilder.com                                        }
 {           https://www.finalbuilder.com                                    }
@@ -41,6 +41,11 @@ uses
 
 type
   IPackageReference = interface;
+  
+  /// <summary>
+  /// Type of dependency resolver algorithm
+  /// </summary>
+  TResolverType = (rtLegacy, rtPubGrub);
 
   TNodeVisitProc = reference to procedure(const packageReference : IPackageReference);
 
@@ -196,6 +201,17 @@ type
     //returns true if all dependencies were resolved. If true, the graph is fully populated and can be serialized.
     function ResolveForInstall(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform; const projectFile : string; const options : TSearchOptions; const newPackage : IPackageInfo; const projectReferences : IList<IPackageReference>; out dependencyGraph : IPackageReference; out resolved : IList<IPackageInfo>) : boolean;
     function ResolveForRestore(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform; const projectFile : string; const options : TSearchOptions; const projectReferences : IList<IPackageReference>; out dependencyGraph : IPackageReference; out resolved : IList<IPackageInfo>) : boolean;
+    function GetResolverType: TResolverType;
+  end;
+  
+  /// <summary>
+  /// Factory for creating dependency resolvers
+  /// </summary>
+  IResolverFactory = interface
+    ['{B8F7E4C1-9D5A-4F2E-8C6B-3A7E9D1C2F4A}']
+    function CreateResolver(const ResolverType: TResolverType): IDependencyResolver;
+    function CreateLegacyResolver: IDependencyResolver;
+    function CreatePubGrubResolver: IDependencyResolver;
   end;
 
 

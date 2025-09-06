@@ -45,7 +45,14 @@ uses
   DPM.Core.Package.Installer.Interfaces;
 
 type
-  TDependencyResolver = class(TInterfacedObject, IDependencyResolver)
+  /// <summary>
+  /// Legacy dependency resolver (renamed from TDependencyResolver)
+  /// This a simple depth first search with backtracking. It records unresolvable paths (nogoods) to avoid searching those again
+  /// When a conflict is found, it tries to resolve that by finding an overlapping dependency version range between the new
+  /// dependency range and the one already resolved. If found then it will undo the previous resolution and push it back on
+  /// the stack to be redone with the overlapping range. If not then we have an unresolvable conflict and exit.
+  /// </summary>
+  TLegacyDependencyResolver = class(TInterfacedObject, IDependencyResolver)
   private
     FLogger : ILogger;
     FRepositoryManager : IPackageRepositoryManager;
@@ -61,6 +68,7 @@ type
 
     function ResolveForInstall(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform; const projectFile : string; const options : TSearchOptions; const newPackage : IPackageInfo; const projectReferences : IList<IPackageReference>; out dependencyGraph : IPackageReference; out resolved : IList<IPackageInfo>) : boolean;
     function ResolveForRestore(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform; const projectFile : string; const options : TSearchOptions; const projectReferences : IList<IPackageReference>; out dependencyGraph : IPackageReference; out resolved : IList<IPackageInfo>) : boolean;
+    function GetResolverType: TResolverType;
 
   public
     constructor Create(const logger : ILogger; const repositoryManager : IPackageRepositoryManager; const packageInstallerContext : IPackageInstallerContext);
@@ -74,9 +82,9 @@ uses
   Generics.Defaults,
   DPM.Core.Constants;
 
-{ TDependencyResolver }
+{ TLegacyDependencyResolver }
 
-constructor TDependencyResolver.Create(const logger : ILogger; const repositoryManager : IPackageRepositoryManager; const packageInstallerContext : IPackageInstallerContext);
+constructor TLegacyDependencyResolver.Create(const logger : ILogger; const repositoryManager : IPackageRepositoryManager; const packageInstallerContext : IPackageInstallerContext);
 begin
   FLogger := logger;
   FRepositoryManager := repositoryManager;
@@ -120,7 +128,7 @@ end;
 /// ://github.com/dart-lang/pub/blob/master/doc/solver.md
 /// If anyone is good math and want's to have a stab at implementing it in Delphi that would be great!
 
-function TDependencyResolver.DoResolve(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform;  const includePrerelease : boolean; const context : IResolverContext) : boolean;
+function TLegacyDependencyResolver.DoResolve(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform;  const includePrerelease : boolean; const context : IResolverContext) : boolean;
 var
   currentPackage : IPackageInfo;
   dependency : IPackageDependency;
@@ -309,14 +317,14 @@ begin
 
 end;
 
-function TDependencyResolver.Initialize(const config: IConfiguration) : boolean;
+function TLegacyDependencyResolver.Initialize(const config: IConfiguration) : boolean;
 begin
   Assert(config <> nil);
   FConfiguration := config;
   result :=FRepositoryManager.Initialize(config);
 end;
 
-function TDependencyResolver.ResolveForInstall(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform;
+function TLegacyDependencyResolver.ResolveForInstall(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform;
                                                const projectFile : string; const options : TSearchOptions; const newPackage : IPackageInfo;
                                                const projectReferences : IList<IPackageReference>; out dependencyGraph : IPackageReference;
                                                out resolved : IList<IPackageInfo>) : boolean;
@@ -353,7 +361,7 @@ end;
 
 //This is all wrong. What it should do is just validate the project references and ensure it's correct, not go off and resolve dependencies
 //which might change the dependecy versions. We only want to change the graph if it's wrong.
-function TDependencyResolver.ResolveForRestore(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform;
+function TLegacyDependencyResolver.ResolveForRestore(const cancellationToken : ICancellationToken; const compilerVersion : TCompilerVersion; const platform : TDPMPlatform;
                                                const projectFile : string; const options : TSearchOptions; const projectReferences : IList<IPackageReference>;
                                                out dependencyGraph : IPackageReference; out resolved : IList<IPackageInfo>) : boolean;
 var
@@ -390,9 +398,13 @@ begin
   result := result and (errorCount = 0);
 end;
 
+function TLegacyDependencyResolver.GetResolverType: TResolverType;
+begin
+  Result := rtLegacy;
+end;
 
 //not called or functioning
-//function TDependencyResolver.ValidateDependencyGraph(const cancellationToken: ICancellationToken; var dependencyGraph: IPackageReference): boolean;
+//function TLegacyDependencyResolver.ValidateDependencyGraph(const cancellationToken: ICancellationToken; var dependencyGraph: IPackageReference): boolean;
 //var
 //  resolvedPackages: IDictionary<string, TPackageVersion>;
 //begin
