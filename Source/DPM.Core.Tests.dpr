@@ -124,7 +124,12 @@ uses
   DPM.Core.Dependency.PubGrub.Incompatibility in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.Incompatibility.pas',
   DPM.Core.Dependency.PubGrub.IncompatibilityStore in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.IncompatibilityStore.pas',
   DPM.Core.Dependency.PubGrub.PartialSolution in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.PartialSolution.pas',
-  DPM.Core.Dependency.PubGrub.Solver in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.Solver.pas';
+  DPM.Core.Dependency.PubGrub.Solver in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.Solver.pas',
+  DPM.Tests.Mocks in 'Tests\PubGrub\DPM.Tests.Mocks.pas',
+  DPM.Tests.PubGrub.Standalone in 'Tests\PubGrub\DPM.Tests.PubGrub.Standalone.pas',
+  DPM.Tests.PubGrub.Core in 'Tests\PubGrub\DPM.Tests.PubGrub.Core.pas',
+  DPM.Tests.PubGrub.Correctness in 'Tests\PubGrub\DPM.Tests.PubGrub.Correctness.pas',
+  DPM.Tests.PubGrub.Scenarios in 'Tests\PubGrub\DPM.Tests.PubGrub.Scenarios.pas';
 
 var
   runner : ITestRunner;
@@ -133,8 +138,10 @@ var
   nunitLogger : ITestLogger;
 begin
 {$IFDEF TESTINSIGHT}
+  {$IFNDEF CONSOLE}
   TestInsight.DUnitX.RunRegisteredTests;
   exit;
+  {$ENDIF}
 {$ENDIF}
   try
     //Check command line options, will exit if invalid
@@ -142,7 +149,7 @@ begin
     //Create the test runner
     runner := TDUnitX.CreateRunner;
     //Tell the runner to use RTTI to find Fixtures
-    runner.UseRTTI := false;
+    runner.UseRTTI := true;
     //tell the runner how we will log things
     //Log to the console window
     logger := TDUnitXConsoleLogger.Create(true);
