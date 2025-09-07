@@ -76,6 +76,8 @@ type
     function Push(const cancellationToken : ICancellationToken; const pushOptions : TPushOptions) : Boolean;
     function List(const cancellationToken : ICancellationToken; const options : TSearchOptions) : IList<IPackageListItem>;
 
+    //testing support
+    procedure AddPackage(const PackageId, Version: string; const Dependencies: array of string);
 
     property Enabled : boolean read GetEnabled write SetEnabled;
     property Name : string read GetName;

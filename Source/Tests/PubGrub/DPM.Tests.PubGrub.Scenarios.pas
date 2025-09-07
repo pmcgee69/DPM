@@ -5,22 +5,30 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils,
-  System.Generics.Collections,
+  Spring.Collections,
+  VSoft.CancellationToken,
+  DPM.Core.Types,
   DPM.Core.Logging,
+  DPM.Core.Package.Interfaces,
+  DPM.Core.Repository.Interfaces,
+  DPM.Core.Configuration.Interfaces,
   DPM.Core.Dependency.Interfaces,
   DPM.Core.Dependency.Version,
+  DPM.Core.Dependency.Reference,
   DPM.Core.Dependency.PubGrub.Types,
-  DPM.Core.Dependency.PubGrub.Solver;
+  DPM.Core.Dependency.PubGrub.Solver,
+  DPM.Core.Options.Search;
 
 type
   [TestFixture]
   TTestPubGrubScenarios = class
   private
-    FMockDependencyProvider: IDependencyProvider;
+    FMockRepository: IPackageRepository;
     FLogger: ILogger;
-    FSolver: TPubGrubSolver;
+    FConfig: IConfiguration;
+    FSolver: IDependencyResolver;
+    FCancellationToken: ICancellationToken;
     
-    function CreateMockContext: IResolverContext;
     function CreatePackageReference(const PackageId, VersionRange: string): IPackageReference;
     procedure SetupMockPackages;
     
@@ -86,8 +94,13 @@ uses
 procedure TTestPubGrubScenarios.Setup;
 begin
   FLogger := TMockLogger.Create;
-  FMockDependencyProvider := TMockDependencyProvider.Create;
-  FSolver := TPubGrubSolver.Create(FMockDependencyProvider, FLogger);
+  FMockRepository := TMockPackageRepository.Create;
+  FConfig := TMockConfiguration.Create;
+  FSolver := TPubGrubSolver.Create(FMockRepository, FLogger);
+  FCancellationToken := TCancellationTokenFactory.Create.CreateToken;
+  
+  // Initialize solver
+  FSolver.Initialize(FConfig);
   
   SetupMockPackages;
 end;
@@ -95,47 +108,47 @@ end;
 procedure TTestPubGrubScenarios.TearDown;
 begin
   FSolver := nil;
-  FMockDependencyProvider := nil;
+  FMockRepository := nil;
   FLogger := nil;
-end;
-
-function TTestPubGrubScenarios.CreateMockContext: IResolverContext;
-begin
-  Result := TMockResolverContext.Create;
-  Result.DependencyProvider := FMockDependencyProvider;
+  FConfig := nil;
+  FCancellationToken := nil;
 end;
 
 function TTestPubGrubScenarios.CreatePackageReference(const PackageId, VersionRange: string): IPackageReference;
 var
-  Range: IVersionRange;
+  Range: TVersionRange;
+  Version: TPackageVersion;
 begin
   Range := TVersionRange.Parse(VersionRange);
-  Result := TMockPackageReference.Create(PackageId, Range);
+  // For mock testing, use the minimum version from range
+  Version := Range.MinVersion;
+  Result := TPackageReference.Create(nil, PackageId, Version, 
+    TDPMPlatform.Win32, TCompilerVersion.RS10_4, Range, False);
 end;
 
 procedure TTestPubGrubScenarios.SetupMockPackages;
 begin
   // Setup mock package repository with known packages and dependencies
-  // This would configure the mock dependency provider with test packages
+  // This would configure the mock repository with test packages
   
   // Example: Package A 1.0.0 depends on B >= 1.0.0
-  FMockDependencyProvider.AddPackage('A', '1.0.0', ['B >= 1.0.0']);
-  FMockDependencyProvider.AddPackage('B', '1.0.0', []);
-  FMockDependencyProvider.AddPackage('B', '1.1.0', []);
-  FMockDependencyProvider.AddPackage('B', '2.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('A', '1.0.0', ['B >= 1.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('B', '1.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('B', '1.1.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('B', '2.0.0', []);
   
   // Diamond dependency scenario
-  FMockDependencyProvider.AddPackage('Root', '1.0.0', ['Left >= 1.0.0', 'Right >= 1.0.0']);
-  FMockDependencyProvider.AddPackage('Left', '1.0.0', ['Shared >= 2.0.0']);
-  FMockDependencyProvider.AddPackage('Right', '1.0.0', ['Shared >= 2.0.0']);
-  FMockDependencyProvider.AddPackage('Shared', '2.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('Root', '1.0.0', ['Left >= 1.0.0', 'Right >= 1.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('Left', '1.0.0', ['Shared >= 2.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('Right', '1.0.0', ['Shared >= 2.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('Shared', '2.0.0', []);
   
   // Conflict scenario
-  FMockDependencyProvider.AddPackage('ConflictRoot', '1.0.0', ['ConflictA >= 1.0.0', 'ConflictB >= 1.0.0']);
-  FMockDependencyProvider.AddPackage('ConflictA', '1.0.0', ['ConflictShared >= 2.0.0']);
-  FMockDependencyProvider.AddPackage('ConflictB', '1.0.0', ['ConflictShared < 2.0.0']);
-  FMockDependencyProvider.AddPackage('ConflictShared', '1.0.0', []);
-  FMockDependencyProvider.AddPackage('ConflictShared', '2.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('ConflictRoot', '1.0.0', ['ConflictA >= 1.0.0', 'ConflictB >= 1.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('ConflictA', '1.0.0', ['ConflictShared >= 2.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('ConflictB', '1.0.0', ['ConflictShared < 2.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('ConflictShared', '1.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('ConflictShared', '2.0.0', []);
 end;
 
 // Test Implementations
@@ -202,9 +215,9 @@ begin
   for I := 0 to 9 do
   begin
     if I = 9 then
-      FMockDependencyProvider.AddPackage(Format('Level%d', [I]), '1.0.0', [])
+      TMockPackageRepository(FMockRepository).AddPackage(Format('Level%d', [I]), '1.0.0', [])
     else
-      FMockDependencyProvider.AddPackage(Format('Level%d', [I]), '1.0.0', 
+      TMockPackageRepository(FMockRepository).AddPackage(Format('Level%d', [I]), '1.0.0', 
         [Format('Level%d >= 1.0.0', [I + 1])]);
   end;
   
@@ -223,8 +236,8 @@ var
   Result: IResolveResult;
 begin
   // Setup circular dependency: CircA -> CircB -> CircA
-  FMockDependencyProvider.AddPackage('CircA', '1.0.0', ['CircB >= 1.0.0']);
-  FMockDependencyProvider.AddPackage('CircB', '1.0.0', ['CircA >= 1.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('CircA', '1.0.0', ['CircB >= 1.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('CircB', '1.0.0', ['CircA >= 1.0.0']);
   
   Context := CreateMockContext;
   Context.RootDependencies.Add(CreatePackageReference('CircA', '1.0.0'));
@@ -241,10 +254,10 @@ var
   Result: IResolveResult;
 begin
   // Setup package with optional dependency based on platform
-  FMockDependencyProvider.AddPackage('OptionalRoot', '1.0.0', 
+  TMockPackageRepository(FMockRepository).AddPackage('OptionalRoot', '1.0.0', 
     ['RequiredDep >= 1.0.0'], ['OptionalDep >= 1.0.0']);
-  FMockDependencyProvider.AddPackage('RequiredDep', '1.0.0', []);
-  FMockDependencyProvider.AddPackage('OptionalDep', '1.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('RequiredDep', '1.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('OptionalDep', '1.0.0', []);
   
   Context := CreateMockContext;
   Context.RootDependencies.Add(CreatePackageReference('OptionalRoot', '1.0.0'));
@@ -261,9 +274,9 @@ var
   Result: IResolveResult;
 begin
   // Setup packages with prerelease versions
-  FMockDependencyProvider.AddPackage('PrereleaseTest', '1.0.0', []);
-  FMockDependencyProvider.AddPackage('PrereleaseTest', '1.1.0-alpha', []);
-  FMockDependencyProvider.AddPackage('PrereleaseTest', '1.1.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('PrereleaseTest', '1.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('PrereleaseTest', '1.1.0-alpha', []);
+  TMockPackageRepository(FMockRepository).AddPackage('PrereleaseTest', '1.1.0', []);
   
   Context := CreateMockContext;
   Context.RootDependencies.Add(CreatePackageReference('PrereleaseTest', '>= 1.0.0'));
@@ -283,14 +296,14 @@ var
   Result: IResolveResult;
 begin
   // Setup scenario with multiple conflicting constraints
-  FMockDependencyProvider.AddPackage('MultiConflictRoot', '1.0.0', 
+  TMockPackageRepository(FMockRepository).AddPackage('MultiConflictRoot', '1.0.0', 
     ['Dep1 >= 1.0.0', 'Dep2 >= 1.0.0', 'Dep3 >= 1.0.0']);
-  FMockDependencyProvider.AddPackage('Dep1', '1.0.0', ['SharedDep >= 3.0.0']);
-  FMockDependencyProvider.AddPackage('Dep2', '1.0.0', ['SharedDep >= 2.0.0, < 3.0.0']);
-  FMockDependencyProvider.AddPackage('Dep3', '1.0.0', ['SharedDep < 2.0.0']);
-  FMockDependencyProvider.AddPackage('SharedDep', '1.0.0', []);
-  FMockDependencyProvider.AddPackage('SharedDep', '2.0.0', []);
-  FMockDependencyProvider.AddPackage('SharedDep', '3.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('Dep1', '1.0.0', ['SharedDep >= 3.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('Dep2', '1.0.0', ['SharedDep >= 2.0.0, < 3.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('Dep3', '1.0.0', ['SharedDep < 2.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('SharedDep', '1.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('SharedDep', '2.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('SharedDep', '3.0.0', []);
   
   Context := CreateMockContext;
   Context.RootDependencies.Add(CreatePackageReference('MultiConflictRoot', '1.0.0'));
@@ -307,10 +320,10 @@ var
   Result: IResolveResult;
 begin
   // Setup scenario that requires backtracking to find solution
-  FMockDependencyProvider.AddPackage('BacktrackRoot', '1.0.0', ['BacktrackA >= 1.0.0']);
-  FMockDependencyProvider.AddPackage('BacktrackA', '1.0.0', ['BacktrackB >= 2.0.0']);
-  FMockDependencyProvider.AddPackage('BacktrackA', '2.0.0', ['BacktrackB >= 1.0.0']);
-  FMockDependencyProvider.AddPackage('BacktrackB', '1.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('BacktrackRoot', '1.0.0', ['BacktrackA >= 1.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('BacktrackA', '1.0.0', ['BacktrackB >= 2.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('BacktrackA', '2.0.0', ['BacktrackB >= 1.0.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('BacktrackB', '1.0.0', []);
   // BacktrackB 2.0.0 intentionally missing to force backtracking
   
   Context := CreateMockContext;
@@ -361,7 +374,7 @@ begin
       for J := 1 to Min(3, I - 1) do
         Dependencies.Add(Format('Package%d >= 1.0.0', [I - J]));
         
-      FMockDependencyProvider.AddPackage(Format('Package%d', [I]), '1.0.0', 
+      TMockPackageRepository(FMockRepository).AddPackage(Format('Package%d', [I]), '1.0.0', 
         Dependencies.ToStringArray);
     finally
       Dependencies.Free;
@@ -383,12 +396,12 @@ var
   Result: IResolveResult;
 begin
   // Simulate a realistic Delphi scenario with Spring4D
-  FMockDependencyProvider.AddPackage('MyApp', '1.0.0', 
+  TMockPackageRepository(FMockRepository).AddPackage('MyApp', '1.0.0', 
     ['Spring4D >= 2.0.0', 'DUnitX >= 17.0.0']);
-  FMockDependencyProvider.AddPackage('Spring4D', '2.0.0', []);
-  FMockDependencyProvider.AddPackage('Spring4D', '2.1.0', []);
-  FMockDependencyProvider.AddPackage('DUnitX', '17.0.0', []);
-  FMockDependencyProvider.AddPackage('DUnitX', '17.1.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('Spring4D', '2.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('Spring4D', '2.1.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('DUnitX', '17.0.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('DUnitX', '17.1.0', []);
   
   Context := CreateMockContext;
   Context.RootDependencies.Add(CreatePackageReference('MyApp', '1.0.0'));
@@ -405,11 +418,11 @@ var
   Result: IResolveResult;
 begin
   // Simulate DevExpress components with version constraints
-  FMockDependencyProvider.AddPackage('MyBusinessApp', '1.0.0', 
+  TMockPackageRepository(FMockRepository).AddPackage('MyBusinessApp', '1.0.0', 
     ['DevExpress.VCL >= 22.1.0', 'DevExpress.Data >= 22.1.0']);
-  FMockDependencyProvider.AddPackage('DevExpress.VCL', '22.1.0', ['DevExpress.Core = 22.1.0']);
-  FMockDependencyProvider.AddPackage('DevExpress.Data', '22.1.0', ['DevExpress.Core = 22.1.0']);
-  FMockDependencyProvider.AddPackage('DevExpress.Core', '22.1.0', []);
+  TMockPackageRepository(FMockRepository).AddPackage('DevExpress.VCL', '22.1.0', ['DevExpress.Core = 22.1.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('DevExpress.Data', '22.1.0', ['DevExpress.Core = 22.1.0']);
+  TMockPackageRepository(FMockRepository).AddPackage('DevExpress.Core', '22.1.0', []);
   
   Context := CreateMockContext;
   Context.RootDependencies.Add(CreatePackageReference('MyBusinessApp', '1.0.0'));

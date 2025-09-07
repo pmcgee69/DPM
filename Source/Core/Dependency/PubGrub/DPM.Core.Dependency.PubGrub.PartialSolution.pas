@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils,
-  System.Generics.Collections,
+  Spring.Collections,
   DPM.Core.Dependency.Interfaces,
   DPM.Core.Dependency.Version,
   DPM.Core.Dependency.PubGrub.Types;
@@ -38,11 +38,11 @@ type
     
     /// <summary>Creates and adds a decision assignment</summary>
     function AddDecision(const PackageId: string; 
-      const VersionRange: IVersionRange): IAssignment;
+      const VersionRange: TVersionRange): IAssignment;
     
     /// <summary>Creates and adds a derivation assignment</summary>
     function AddDerivation(const PackageId: string; 
-      const VersionRange: IVersionRange; 
+      const VersionRange: TVersionRange; 
       const Cause: IIncompatibility): IAssignment;
     
     /// <summary>Increments the decision level for new decisions</summary>
@@ -56,7 +56,7 @@ type
     
     /// <summary>Gets the intersection of current assignment with term's range</summary>
     function GetIntersection(const PackageId: string; 
-      const VersionRange: IVersionRange): IVersionRange;
+      const VersionRange: TVersionRange): TVersionRange;
       
     property Assignments: IList<IAssignment> read GetAssignments;
     property DecisionLevel: Integer read GetDecisionLevel;
@@ -101,7 +101,7 @@ begin
     
   // Check for duplicate package assignment
   if FPackageAssignments.ContainsKey(Assignment.PackageId) then
-    raise EInvalidOperationException.CreateFmt(
+    raise EInvalidOpException.CreateFmt(
       'Package %s is already assigned', [Assignment.PackageId]);
       
   FAssignments.Add(Assignment);
@@ -166,14 +166,15 @@ begin
   // Check if the assignment satisfies the term
   if Term.Positive then
   begin
-    // Positive term: assignment must satisfy the range
-    if Assignment.VersionRange.Satisfies(Term.VersionRange) then
+    // Positive term: assignment range must be subset of or equal to term range
+    if Assignment.VersionRange.IsSubsetOrEqualTo(Term.VersionRange) then
       Result := Assignment;
   end
   else
   begin
-    // Negative term: assignment must NOT satisfy the range  
-    if not Assignment.VersionRange.Overlaps(Term.VersionRange) then
+    // Negative term: assignment must NOT overlap with the range
+    var TempRange: TVersionRange;
+    if not Assignment.VersionRange.TryGetIntersectingRange(Term.VersionRange, TempRange) then
       Result := Assignment;
   end;
 end;
@@ -200,7 +201,7 @@ begin
 end;
 
 function TPartialSolution.AddDecision(const PackageId: string; 
-  const VersionRange: IVersionRange): IAssignment;
+  const VersionRange: TVersionRange): IAssignment;
 begin
   IncrementDecisionLevel;
   Result := TAssignment.CreateDecision(PackageId, VersionRange, 
@@ -209,7 +210,7 @@ begin
 end;
 
 function TPartialSolution.AddDerivation(const PackageId: string; 
-  const VersionRange: IVersionRange; 
+  const VersionRange: TVersionRange; 
   const Cause: IIncompatibility): IAssignment;
 begin
   Result := TAssignment.CreateDerivation(PackageId, VersionRange, 
@@ -241,7 +242,7 @@ begin
 end;
 
 function TPartialSolution.GetIntersection(const PackageId: string; 
-  const VersionRange: IVersionRange): IVersionRange;
+  const VersionRange: TVersionRange): TVersionRange;
 var
   Assignment: IAssignment;
 begin
@@ -250,7 +251,8 @@ begin
   if FPackageAssignments.TryGetValue(PackageId, Assignment) then
   begin
     // Return intersection of current assignment and the requested range
-    Result := Assignment.VersionRange.Intersect(VersionRange);
+    if not Assignment.VersionRange.TryGetIntersectingRange(VersionRange, Result) then
+      Result := TVersionRange.Empty;
   end;
 end;
 

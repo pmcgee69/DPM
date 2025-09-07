@@ -15,7 +15,7 @@ type
   TAssignment = class(TInterfacedObject, IAssignment)
   private
     FPackageId: string;
-    FVersionRange: IVersionRange;
+    FVersionRange: TVersionRange;
     FAssignmentType: TAssignmentType;
     FDecisionLevel: Integer;
     FCause: IIncompatibility;
@@ -23,14 +23,14 @@ type
     
   protected
     function GetPackageId: string;
-    function GetVersionRange: IVersionRange;
+    function GetVersionRange: TVersionRange;
     function GetAssignmentType: TAssignmentType;
     function GetDecisionLevel: Integer;
     function GetCause: IIncompatibility;
     function GetIndex: Integer;
     
   public
-    constructor Create(const APackageId: string; const AVersionRange: IVersionRange;
+    constructor Create(const APackageId: string; const AVersionRange: TVersionRange;
       const AAssignmentType: TAssignmentType; const ADecisionLevel: Integer;
       const AIndex: Integer; const ACause: IIncompatibility = nil);
       
@@ -40,16 +40,16 @@ type
     
     /// <summary>Creates a decision assignment</summary>
     class function CreateDecision(const PackageId: string; 
-      const VersionRange: IVersionRange; const DecisionLevel: Integer;
+      const VersionRange: TVersionRange; const DecisionLevel: Integer;
       const Index: Integer): IAssignment; static;
     
     /// <summary>Creates a derivation assignment</summary>
     class function CreateDerivation(const PackageId: string;
-      const VersionRange: IVersionRange; const DecisionLevel: Integer;
+      const VersionRange: TVersionRange; const DecisionLevel: Integer;
       const Index: Integer; const Cause: IIncompatibility): IAssignment; static;
       
     property PackageId: string read GetPackageId;
-    property VersionRange: IVersionRange read GetVersionRange;
+    property VersionRange: TVersionRange read GetVersionRange;
     property AssignmentType: TAssignmentType read GetAssignmentType;
     property DecisionLevel: Integer read GetDecisionLevel;
     property Cause: IIncompatibility read GetCause;
@@ -61,7 +61,7 @@ implementation
 { TAssignment }
 
 constructor TAssignment.Create(const APackageId: string; 
-  const AVersionRange: IVersionRange; const AAssignmentType: TAssignmentType;
+  const AVersionRange: TVersionRange; const AAssignmentType: TAssignmentType;
   const ADecisionLevel: Integer; const AIndex: Integer; 
   const ACause: IIncompatibility);
 begin
@@ -69,8 +69,8 @@ begin
   
   if APackageId = '' then
     raise EArgumentException.Create('PackageId cannot be empty');
-  if AVersionRange = nil then
-    raise EArgumentNilException.Create('VersionRange cannot be nil');
+  if AVersionRange.IsEmpty then
+    raise EArgumentException.Create('VersionRange cannot be empty');
   if ADecisionLevel < 0 then
     raise EArgumentException.Create('DecisionLevel cannot be negative');
   if AIndex < 0 then
@@ -93,7 +93,7 @@ begin
   Result := FPackageId;
 end;
 
-function TAssignment.GetVersionRange: IVersionRange;
+function TAssignment.GetVersionRange: TVersionRange;
 begin
   Result := FVersionRange;
 end;
@@ -145,7 +145,7 @@ begin
             (FAssignmentType = Other.FAssignmentType) and
             (FDecisionLevel = Other.FDecisionLevel) and
             (FIndex = Other.FIndex) and
-            FVersionRange.Equals(Other.FVersionRange);
+            (FVersionRange = Other.FVersionRange);
             
   // Note: We don't compare FCause to avoid circular dependencies in equality
 end;
@@ -156,11 +156,11 @@ begin
   Result := Result xor (Integer(FAssignmentType) shl 8);
   Result := Result xor (FDecisionLevel shl 16);
   Result := Result xor (FIndex shl 24);
-  Result := Result xor FVersionRange.GetHashCode;
+  Result := Result xor FVersionRange.ToString.GetHashCode;
 end;
 
 class function TAssignment.CreateDecision(const PackageId: string; 
-  const VersionRange: IVersionRange; const DecisionLevel: Integer;
+  const VersionRange: TVersionRange; const DecisionLevel: Integer;
   const Index: Integer): IAssignment;
 begin
   Result := TAssignment.Create(PackageId, VersionRange, atDecision, 
@@ -168,7 +168,7 @@ begin
 end;
 
 class function TAssignment.CreateDerivation(const PackageId: string;
-  const VersionRange: IVersionRange; const DecisionLevel: Integer;
+  const VersionRange: TVersionRange; const DecisionLevel: Integer;
   const Index: Integer; const Cause: IIncompatibility): IAssignment;
 begin
   Result := TAssignment.Create(PackageId, VersionRange, atDerivation, 

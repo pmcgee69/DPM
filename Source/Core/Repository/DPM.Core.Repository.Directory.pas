@@ -91,7 +91,9 @@ type
     //commands
     function Push(const cancellationToken : ICancellationToken; const pushOptions : TPushOptions): Boolean;
     function List(const cancellationToken : ICancellationToken; const options : TSearchOptions) : IList<IPackageListItem>; overload;
-
+    
+    //testing support
+    procedure AddPackage(const PackageId, Version: string; const Dependencies: array of string);
 
   public
     constructor Create(const logger : ILogger); override;
@@ -1218,6 +1220,12 @@ begin
       Logger.Error('Unable to copy file [' + pushOptions.PackagePath + '] to [' + SourceUri + '] : ' + e.Message);
     end;
   end;
+end;
+
+procedure TDirectoryPackageRepository.AddPackage(const PackageId, Version: string; const Dependencies: array of string);
+begin
+  // Not implemented for Directory repository - this is for testing support only
+  raise Exception.Create('AddPackage is not supported by Directory repository');
 end;
 
 end.

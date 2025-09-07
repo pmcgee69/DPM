@@ -3,7 +3,7 @@ unit DPM.Core.Dependency.PubGrub.Types;
 interface
 
 uses
-  System.Generics.Collections,
+  Spring.Collections,
   DPM.Core.Dependency.Interfaces,
   DPM.Core.Dependency.Version;
 
@@ -41,14 +41,17 @@ type
   ITerm = interface
     ['{8B5E4F12-A3C7-4D1E-9F2A-1B3C8D4E5F67}']
     function GetPackageId: string;
-    function GetVersionRange: IVersionRange; 
+    function GetVersionRange: TVersionRange; 
     function GetPositive: Boolean;
     function GetInverse: ITerm;
+    function ToString: string;
+    function GetHashCode: Integer;
+    function Equals(const Other: ITerm): Boolean;
     
     /// <summary>Package identifier</summary>
     property PackageId: string read GetPackageId;
     /// <summary>Version constraint</summary>
-    property VersionRange: IVersionRange read GetVersionRange;
+    property VersionRange: TVersionRange read GetVersionRange;
     /// <summary>True = requires this constraint, False = conflicts with this constraint</summary>
     property Positive: Boolean read GetPositive;
     /// <summary>Returns the logical inverse of this term</summary>
@@ -61,7 +64,7 @@ type
   IAssignment = interface
     ['{7A4D3C2B-1E5F-4A8B-9C6D-2F7E8A9B0C1D}']
     function GetPackageId: string;
-    function GetVersionRange: IVersionRange;
+    function GetVersionRange: TVersionRange;
     function GetAssignmentType: TAssignmentType;
     function GetDecisionLevel: Integer;
     function GetCause: IIncompatibility;
@@ -70,7 +73,7 @@ type
     /// <summary>Package identifier</summary>
     property PackageId: string read GetPackageId;
     /// <summary>Assigned version range</summary>
-    property VersionRange: IVersionRange read GetVersionRange;
+    property VersionRange: TVersionRange read GetVersionRange;
     /// <summary>How this assignment was made</summary>
     property AssignmentType: TAssignmentType read GetAssignmentType;
     /// <summary>Decision level (depth in search tree)</summary>
@@ -120,6 +123,28 @@ type
     function GetUnsatisfied(const Terms: IList<ITerm>): IList<ITerm>;
     procedure Clear;
     
+    /// <summary>Creates and adds a decision assignment</summary>
+    function AddDecision(const PackageId: string; 
+      const VersionRange: TVersionRange): IAssignment;
+    
+    /// <summary>Creates and adds a derivation assignment</summary>
+    function AddDerivation(const PackageId: string; 
+      const VersionRange: TVersionRange; 
+      const Cause: IIncompatibility): IAssignment;
+      
+    /// <summary>Increments the decision level for new decisions</summary>
+    procedure IncrementDecisionLevel;
+    
+    /// <summary>Gets assignments at a specific decision level</summary>
+    function GetAssignmentsAtLevel(const Level: Integer): IList<IAssignment>;
+    
+    /// <summary>Checks if a term is satisfied by current assignments</summary>
+    function IsSatisfied(const Term: ITerm): Boolean;
+    
+    /// <summary>Gets the intersection of current assignment with term's range</summary>
+    function GetIntersection(const PackageId: string; 
+      const VersionRange: TVersionRange): TVersionRange;
+    
     /// <summary>All assignments in chronological order</summary>
     property Assignments: IList<IAssignment> read GetAssignments;
     /// <summary>Current decision level (search depth)</summary>
@@ -136,6 +161,7 @@ type
     function FindConflicts(const Assignment: IAssignment): IList<IIncompatibility>;
     function Count: Integer;
     procedure Clear;
+    function GetAll: IEnumerable<IIncompatibility>;
   end;
 
   /// <summary>

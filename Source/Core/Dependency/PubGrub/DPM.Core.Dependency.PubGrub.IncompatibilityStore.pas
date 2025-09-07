@@ -4,7 +4,8 @@ interface
 
 uses
   System.SysUtils,
-  System.Generics.Collections,
+  Spring.Collections,
+  DPM.Core.Dependency.Version,
   DPM.Core.Dependency.PubGrub.Types;
 
 type
@@ -116,14 +117,15 @@ begin
         // This term relates to our assignment
         if Term.Positive then
         begin
-          // Positive term: assignment must satisfy the range
-          if not Assignment.VersionRange.Satisfies(Term.VersionRange) then
+          // Positive term: assignment range must be subset of or equal to term range
+          if not Assignment.VersionRange.IsSubsetOrEqualTo(Term.VersionRange) then
             Inc(UnsatisfiedCount);
         end
         else
         begin
           // Negative term: assignment must NOT overlap with the range
-          if Assignment.VersionRange.Overlaps(Term.VersionRange) then
+          var TempRange: TVersionRange;
+          if Assignment.VersionRange.TryGetIntersectingRange(Term.VersionRange, TempRange) then
           begin
             ConflictFound := True;
             Break;
@@ -165,14 +167,15 @@ begin
         // This term relates to our assignment
         if Term.Positive then
         begin
-          // Positive term: assignment satisfies if it includes the range
-          if Assignment.VersionRange.Satisfies(Term.VersionRange) then
+          // Positive term: assignment satisfies if its range is subset of or equal to term range
+          if Assignment.VersionRange.IsSubsetOrEqualTo(Term.VersionRange) then
             Inc(SatisfiedTerms);
         end
         else
         begin
           // Negative term: assignment satisfies if it doesn't overlap
-          if not Assignment.VersionRange.Overlaps(Term.VersionRange) then
+          var TempRange: TVersionRange;
+          if not Assignment.VersionRange.TryGetIntersectingRange(Term.VersionRange, TempRange) then
             Inc(SatisfiedTerms);
         end;
       end;

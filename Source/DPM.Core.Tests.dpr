@@ -117,7 +117,14 @@ uses
   DPM.Core.Manifest in 'Core\Manifest\DPM.Core.Manifest.pas',
   DPM.Core.Manifest.Reader in 'Core\Manifest\DPM.Core.Manifest.Reader.pas',
   DPM.Core.Tests.PackageIdentity in 'Tests\DPM.Core.Tests.PackageIdentity.pas',
-  DPM.Core.Utils.Hash in 'Core\Utils\DPM.Core.Utils.Hash.pas';
+  DPM.Core.Utils.Hash in 'Core\Utils\DPM.Core.Utils.Hash.pas',
+  DPM.Core.Dependency.PubGrub.Types in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.Types.pas',
+  DPM.Core.Dependency.PubGrub.Term in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.Term.pas',
+  DPM.Core.Dependency.PubGrub.Assignment in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.Assignment.pas',
+  DPM.Core.Dependency.PubGrub.Incompatibility in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.Incompatibility.pas',
+  DPM.Core.Dependency.PubGrub.IncompatibilityStore in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.IncompatibilityStore.pas',
+  DPM.Core.Dependency.PubGrub.PartialSolution in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.PartialSolution.pas',
+  DPM.Core.Dependency.PubGrub.Solver in 'Core\Dependency\PubGrub\DPM.Core.Dependency.PubGrub.Solver.pas';
 
 var
   runner : ITestRunner;

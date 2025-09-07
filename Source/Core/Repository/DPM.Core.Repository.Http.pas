@@ -72,6 +72,9 @@ type
 
     //commands
     function Push(const cancellationToken : ICancellationToken; const pushOptions : TPushOptions) : Boolean;
+    
+    //testing support
+    procedure AddPackage(const PackageId, Version: string; const Dependencies: array of string);
 
   public
     constructor Create(const logger : ILogger); override;
@@ -1129,6 +1132,12 @@ begin
   Logger.Information(Format('Package Upload [%d] : %s', [response.StatusCode, response.Response]));
 
   result := response.StatusCode = 201;
+end;
+
+procedure TDPMServerPackageRepository.AddPackage(const PackageId, Version: string; const Dependencies: array of string);
+begin
+  // Not implemented for HTTP repository - this is for testing support only
+  raise Exception.Create('AddPackage is not supported by HTTP repository');
 end;
 
 end.

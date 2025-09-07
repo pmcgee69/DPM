@@ -4,8 +4,9 @@ interface
 
 uses
   System.SysUtils,
-  System.Generics.Collections,
   System.Classes,
+  Spring.Collections,
+  DPM.Core.Dependency.Version,
   DPM.Core.Dependency.PubGrub.Types;
 
 type
@@ -40,8 +41,8 @@ type
     
     /// <summary>Creates an incompatibility from package dependency</summary>
     class function FromDependency(const PackageId: string;
-      const PackageVersion: IVersionRange; const DependencyId: string;
-      const DependencyRange: IVersionRange): IIncompatibility; static;
+      const PackageVersion: TVersionRange; const DependencyId: string;
+      const DependencyRange: TVersionRange): IIncompatibility; static;
     
     /// <summary>Creates an incompatibility indicating no versions available</summary>
     class function NoVersions(const PackageId: string): IIncompatibility; static;
@@ -51,7 +52,7 @@ type
     
     /// <summary>Creates an incompatibility from version conflict</summary>
     class function FromConflict(const PackageId: string;
-      const Range1, Range2: IVersionRange): IIncompatibility; static;
+      const Range1, Range2: TVersionRange): IIncompatibility; static;
       
     property Terms: IList<ITerm> read GetTerms;
     property Cause: TIncompatibilityCause read GetCause;
@@ -63,8 +64,7 @@ implementation
 
 uses
   System.StrUtils,
-  DPM.Core.Dependency.PubGrub.Term,
-  DPM.Core.Dependency.Version;
+  DPM.Core.Dependency.PubGrub.Term;
 
 { TIncompatibility }
 
@@ -203,8 +203,8 @@ begin
 end;
 
 class function TIncompatibility.FromDependency(const PackageId: string;
-  const PackageVersion: IVersionRange; const DependencyId: string;
-  const DependencyRange: IVersionRange): IIncompatibility;
+  const PackageVersion: TVersionRange; const DependencyId: string;
+  const DependencyRange: TVersionRange): IIncompatibility;
 var
   Terms: array[0..1] of ITerm;
 begin
@@ -219,9 +219,9 @@ end;
 class function TIncompatibility.NoVersions(const PackageId: string): IIncompatibility;
 var
   Terms: array[0..0] of ITerm;
-  AllVersions: IVersionRange;
+  AllVersions: TVersionRange;
 begin
-  AllVersions := TVersionRange.CreateAny;
+  AllVersions := TVersionRange.Parse('[0.0.0,)');
   Terms[0] := TTerm.Conflict(PackageId, AllVersions);
   
   Result := TIncompatibility.Create(Terms, icNoVersions,
@@ -234,7 +234,7 @@ begin
 end;
 
 class function TIncompatibility.FromConflict(const PackageId: string;
-  const Range1, Range2: IVersionRange): IIncompatibility;
+  const Range1, Range2: TVersionRange): IIncompatibility;
 var
   Terms: array[0..1] of ITerm;
 begin
